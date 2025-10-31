@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -10,8 +9,9 @@ import { AddRequestModal } from './components/modals/AddRequestModal';
 import { AddEvidenceModal } from './components/modals/AddEvidenceModal';
 import { AuditProject, AuditRequest, Evidence, RequestStatus } from './types';
 import { db } from './firebase';
-// FIX: Removed v9 modular imports from 'firebase/firestore' as they are not found, suggesting an older SDK version.
-// The functions will be replaced with their v8 namespaced equivalents.
+// FIX: The following Firebase v9 modular imports are removed because the project uses an older SDK version.
+// The functions collection, onSnapshot, addDoc, doc, deleteDoc were not found.
+// All Firestore operations will now use the v8 namespaced syntax (e.g., db.collection()).
 
 type View = 'dashboard' | 'permintaan' | 'bukti';
 
@@ -31,40 +31,31 @@ const App: React.FC = () => {
   useEffect(() => {
     setLoading(true);
 
-    // FIX: Refactored onSnapshot to use Firebase v8 namespaced API.
-    const unsubProjects = db.collection('projects').onSnapshot(
-      (snapshot) => {
-        const projectsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditProject));
-        setProjects(projectsList);
-      },
-      (error) => {
-        console.error("Error listening to projects collection:", error);
-      }
-    );
+    // FIX: Updated to Firebase v8 syntax for real-time listeners.
+    const unsubProjects = db.collection("projects").onSnapshot((snapshot) => {
+      const projectsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditProject));
+      setProjects(projectsList);
+    }, (error) => {
+      console.error("Error listening to projects collection:", error);
+    });
 
-    // FIX: Refactored onSnapshot to use Firebase v8 namespaced API.
-    const unsubRequests = db.collection('requests').onSnapshot(
-      (snapshot) => {
-        const requestsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditRequest));
-        setRequests(requestsList);
-      },
-      (error) => {
-        console.error("Error listening to requests collection:", error);
-      }
-    );
+    // FIX: Updated to Firebase v8 syntax for real-time listeners.
+    const unsubRequests = db.collection("requests").onSnapshot((snapshot) => {
+      const requestsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditRequest));
+      setRequests(requestsList);
+    }, (error) => {
+      console.error("Error listening to requests collection:", error);
+    });
 
-    // FIX: Refactored onSnapshot to use Firebase v8 namespaced API.
-    const unsubEvidence = db.collection('evidence').onSnapshot(
-      (snapshot) => {
-        const evidenceList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evidence));
-        setEvidence(evidenceList);
-        setLoading(false); // Data loaded
-      },
-      (error) => {
-        console.error("Error listening to evidence collection:", error);
-        setLoading(false);
-      }
-    );
+    // FIX: Updated to Firebase v8 syntax for real-time listeners.
+    const unsubEvidence = db.collection("evidence").onSnapshot((snapshot) => {
+      const evidenceList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evidence));
+      setEvidence(evidenceList);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error listening to evidence collection:", error);
+      setLoading(false);
+    });
 
     return () => {
       unsubProjects();
@@ -76,7 +67,7 @@ const App: React.FC = () => {
 
   const addProject = async (name: string) => {
     try {
-      // FIX: Refactored addDoc to use Firebase v8 namespaced API.
+      // FIX: Updated to Firebase v8 syntax for adding a document.
       await db.collection('projects').add({ name });
       setAddProjectModalOpen(false);
     } catch (error) {
@@ -90,7 +81,7 @@ const App: React.FC = () => {
          ...requestData,
          status: RequestStatus.NotStarted,
        };
-       // FIX: Refactored addDoc to use Firebase v8 namespaced API.
+       // FIX: Updated to Firebase v8 syntax for adding a document.
        await db.collection('requests').add(newRequestData);
        setAddRequestModalOpen(false);
      } catch (error) {
@@ -102,9 +93,9 @@ const App: React.FC = () => {
      try {
        const newEvidenceData = {
          ...evidenceData,
-         fileLink: '#', // Placeholder, you might want to integrate with Firebase Storage later
+         fileLink: '#', // Placeholder
        };
-       // FIX: Refactored addDoc to use Firebase v8 namespaced API.
+       // FIX: Updated to Firebase v8 syntax for adding a document.
        await db.collection('evidence').add(newEvidenceData);
        setAddEvidenceModalOpen(false);
      } catch (error) {
@@ -114,7 +105,7 @@ const App: React.FC = () => {
   
   const deleteRequest = async (requestId: string) => {
     try {
-      // FIX: Refactored deleteDoc and doc to use Firebase v8 namespaced API.
+      // FIX: Updated to Firebase v8 syntax for deleting a document.
       await db.collection('requests').doc(requestId).delete();
     } catch (error) {
       console.error("Error deleting request: ", error);
@@ -123,7 +114,7 @@ const App: React.FC = () => {
 
   const deleteEvidence = async (evidenceId: string) => {
     try {
-      // FIX: Refactored deleteDoc and doc to use Firebase v8 namespaced API.
+      // FIX: Updated to Firebase v8 syntax for deleting a document.
       await db.collection('evidence').doc(evidenceId).delete();
     } catch (error)
       {
