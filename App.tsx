@@ -10,7 +10,8 @@ import { AddRequestModal } from './components/modals/AddRequestModal';
 import { AddEvidenceModal } from './components/modals/AddEvidenceModal';
 import { AuditProject, AuditRequest, Evidence, RequestStatus } from './types';
 import { db } from './firebase';
-import { collection, addDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
+// FIX: Removed v9 modular imports from 'firebase/firestore' as they are not found, suggesting an older SDK version.
+// The functions will be replaced with their v8 namespaced equivalents.
 
 type View = 'dashboard' | 'permintaan' | 'bukti';
 
@@ -30,7 +31,8 @@ const App: React.FC = () => {
   useEffect(() => {
     setLoading(true);
 
-    const unsubProjects = onSnapshot(collection(db, 'projects'), 
+    // FIX: Refactored onSnapshot to use Firebase v8 namespaced API.
+    const unsubProjects = db.collection('projects').onSnapshot(
       (snapshot) => {
         const projectsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditProject));
         setProjects(projectsList);
@@ -40,7 +42,8 @@ const App: React.FC = () => {
       }
     );
 
-    const unsubRequests = onSnapshot(collection(db, 'requests'), 
+    // FIX: Refactored onSnapshot to use Firebase v8 namespaced API.
+    const unsubRequests = db.collection('requests').onSnapshot(
       (snapshot) => {
         const requestsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditRequest));
         setRequests(requestsList);
@@ -50,7 +53,8 @@ const App: React.FC = () => {
       }
     );
 
-    const unsubEvidence = onSnapshot(collection(db, 'evidence'), 
+    // FIX: Refactored onSnapshot to use Firebase v8 namespaced API.
+    const unsubEvidence = db.collection('evidence').onSnapshot(
       (snapshot) => {
         const evidenceList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evidence));
         setEvidence(evidenceList);
@@ -62,7 +66,6 @@ const App: React.FC = () => {
       }
     );
 
-    // Cleanup listeners on component unmount
     return () => {
       unsubProjects();
       unsubRequests();
@@ -73,7 +76,8 @@ const App: React.FC = () => {
 
   const addProject = async (name: string) => {
     try {
-      await addDoc(collection(db, 'projects'), { name });
+      // FIX: Refactored addDoc to use Firebase v8 namespaced API.
+      await db.collection('projects').add({ name });
       setAddProjectModalOpen(false);
     } catch (error) {
       console.error("Error adding project: ", error);
@@ -86,7 +90,8 @@ const App: React.FC = () => {
          ...requestData,
          status: RequestStatus.NotStarted,
        };
-       await addDoc(collection(db, 'requests'), newRequestData);
+       // FIX: Refactored addDoc to use Firebase v8 namespaced API.
+       await db.collection('requests').add(newRequestData);
        setAddRequestModalOpen(false);
      } catch (error) {
        console.error("Error adding request: ", error);
@@ -99,7 +104,8 @@ const App: React.FC = () => {
          ...evidenceData,
          fileLink: '#', // Placeholder, you might want to integrate with Firebase Storage later
        };
-       await addDoc(collection(db, 'evidence'), newEvidenceData);
+       // FIX: Refactored addDoc to use Firebase v8 namespaced API.
+       await db.collection('evidence').add(newEvidenceData);
        setAddEvidenceModalOpen(false);
      } catch (error) {
        console.error("Error adding evidence: ", error);
@@ -108,7 +114,8 @@ const App: React.FC = () => {
   
   const deleteRequest = async (requestId: string) => {
     try {
-      await deleteDoc(doc(db, 'requests', requestId));
+      // FIX: Refactored deleteDoc and doc to use Firebase v8 namespaced API.
+      await db.collection('requests').doc(requestId).delete();
     } catch (error) {
       console.error("Error deleting request: ", error);
     }
@@ -116,7 +123,8 @@ const App: React.FC = () => {
 
   const deleteEvidence = async (evidenceId: string) => {
     try {
-      await deleteDoc(doc(db, 'evidence', evidenceId));
+      // FIX: Refactored deleteDoc and doc to use Firebase v8 namespaced API.
+      await db.collection('evidence').doc(evidenceId).delete();
     } catch (error)
       {
       console.error("Error deleting evidence: ", error);
