@@ -10,7 +10,7 @@ import { AddRequestModal } from './components/modals/AddRequestModal';
 import { AddEvidenceModal } from './components/modals/AddEvidenceModal';
 import { AuditProject, AuditRequest, Evidence, RequestStatus } from './types';
 import { db } from './firebase';
-import { collection, getDocs, addDoc, deleteDoc, doc, DocumentData, QueryDocumentSnapshot } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
 
 type View = 'dashboard' | 'permintaan' | 'bukti';
 
@@ -27,40 +27,53 @@ const App: React.FC = () => {
   const [requests, setRequests] = useState<AuditRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const projectsCollection = collection(db, 'projects');
-      const projectsSnapshot = await getDocs(projectsCollection);
-      const projectsList = projectsSnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({ id: doc.id, ...doc.data() } as AuditProject));
-      setProjects(projectsList);
-
-      const evidenceCollection = collection(db, 'evidence');
-      const evidenceSnapshot = await getDocs(evidenceCollection);
-      const evidenceList = evidenceSnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({ id: doc.id, ...doc.data() } as Evidence));
-      setEvidence(evidenceList);
-
-      const requestsCollection = collection(db, 'requests');
-      const requestsSnapshot = await getDocs(requestsCollection);
-      const requestsList = requestsSnapshot.docs.map((doc: QueryDocumentSnapshot<DocumentData>) => ({ id: doc.id, ...doc.data() } as AuditRequest));
-      setRequests(requestsList);
-    } catch (error) {
-      console.error("Error fetching data: ", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchData();
+    setLoading(true);
+
+    const unsubProjects = onSnapshot(collection(db, 'projects'), 
+      (snapshot) => {
+        const projectsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditProject));
+        setProjects(projectsList);
+      },
+      (error) => {
+        console.error("Error listening to projects collection:", error);
+      }
+    );
+
+    const unsubRequests = onSnapshot(collection(db, 'requests'), 
+      (snapshot) => {
+        const requestsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditRequest));
+        setRequests(requestsList);
+      },
+      (error) => {
+        console.error("Error listening to requests collection:", error);
+      }
+    );
+
+    const unsubEvidence = onSnapshot(collection(db, 'evidence'), 
+      (snapshot) => {
+        const evidenceList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evidence));
+        setEvidence(evidenceList);
+        setLoading(false); // Data loaded
+      },
+      (error) => {
+        console.error("Error listening to evidence collection:", error);
+        setLoading(false);
+      }
+    );
+
+    // Cleanup listeners on component unmount
+    return () => {
+      unsubProjects();
+      unsubRequests();
+      unsubEvidence();
+    };
   }, []);
+
 
   const addProject = async (name: string) => {
     try {
-      const newProjectData = { name };
-      const docRef = await addDoc(collection(db, 'projects'), newProjectData);
-      const newProject: AuditProject = { id: docRef.id, ...newProjectData };
-      setProjects([...projects, newProject]);
+      await addDoc(collection(db, 'projects'), { name });
       setAddProjectModalOpen(false);
     } catch (error) {
       console.error("Error adding project: ", error);
@@ -73,9 +86,7 @@ const App: React.FC = () => {
          ...requestData,
          status: RequestStatus.NotStarted,
        };
-       const docRef = await addDoc(collection(db, 'requests'), newRequestData);
-       const newRequest: AuditRequest = { id: docRef.id, ...newRequestData };
-       setRequests([...requests, newRequest]);
+       await addDoc(collection(db, 'requests'), newRequestData);
        setAddRequestModalOpen(false);
      } catch (error) {
        console.error("Error adding request: ", error);
@@ -88,9 +99,7 @@ const App: React.FC = () => {
          ...evidenceData,
          fileLink: '#', // Placeholder, you might want to integrate with Firebase Storage later
        };
-       const docRef = await addDoc(collection(db, 'evidence'), newEvidenceData);
-       const newEvidence: Evidence = { id: docRef.id, ...newEvidenceData };
-       setEvidence([...evidence, newEvidence]);
+       await addDoc(collection(db, 'evidence'), newEvidenceData);
        setAddEvidenceModalOpen(false);
      } catch (error) {
        console.error("Error adding evidence: ", error);
@@ -100,7 +109,6 @@ const App: React.FC = () => {
   const deleteRequest = async (requestId: string) => {
     try {
       await deleteDoc(doc(db, 'requests', requestId));
-      setRequests(currentRequests => currentRequests.filter(req => req.id !== requestId));
     } catch (error) {
       console.error("Error deleting request: ", error);
     }
@@ -109,8 +117,8 @@ const App: React.FC = () => {
   const deleteEvidence = async (evidenceId: string) => {
     try {
       await deleteDoc(doc(db, 'evidence', evidenceId));
-      setEvidence(currentEvidence => currentEvidence.filter(ev => ev.id !== evidenceId));
-    } catch (error) {
+    } catch (error)
+      {
       console.error("Error deleting evidence: ", error);
     }
   };
@@ -121,7 +129,7 @@ const App: React.FC = () => {
         <div className="flex justify-center items-center h-full">
           <div className="flex items-center space-x-2">
              <i className="fa-solid fa-spinner fa-spin text-2xl text-brand-blue"></i>
-             <span className="text-lg">Memuat data...</span>
+             <span className="text-lg">Menghubungkan ke database...</span>
           </div>
         </div>
       );
