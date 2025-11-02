@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 
@@ -13,10 +12,11 @@ const firebaseConfig = {
   measurementId: "G-KPPQBSLW4B"
 };
 
-// Cek apakah konfigurasi masih placeholder. Ini penting untuk memandu pengguna
-// agar memasukkan kredensial mereka sendiri jika file ini di-reset.
-export const isFirebaseConfigPlaceholder =
-  firebaseConfig.apiKey === 'PASTE_YOUR_API_KEY_HERE';
+// Cek apakah ada nilai dalam konfigurasi yang masih merupakan placeholder.
+// Ini memastikan aplikasi memberikan panduan jika konfigurasi tidak lengkap.
+export const isFirebaseConfigPlaceholder = Object.values(firebaseConfig).some(
+  (value) => typeof value === 'string' && value.includes('PASTE_YOUR_')
+);
 
 // Inisialisasi Firebase.
 // Aplikasi hanya akan diinisialisasi jika konfigurasi *bukan* placeholder.
