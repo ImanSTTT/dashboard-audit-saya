@@ -12,17 +12,8 @@ const firebaseConfig = {
   measurementId: "G-KPPQBSLW4B"
 };
 
-// Cek apakah ada nilai dalam konfigurasi yang masih merupakan placeholder.
-// Ini memastikan aplikasi memberikan panduan jika konfigurasi tidak lengkap.
-export const isFirebaseConfigPlaceholder = Object.values(firebaseConfig).some(
-  (value) => typeof value === 'string' && value.includes('PASTE_YOUR_')
-);
-
 // Inisialisasi Firebase.
-// Aplikasi hanya akan diinisialisasi jika konfigurasi *bukan* placeholder.
-const app = !isFirebaseConfigPlaceholder ? initializeApp(firebaseConfig) : null;
+const app = initializeApp(firebaseConfig);
 
 // Inisialisasi Cloud Firestore dan ekspor.
-// Akan bernilai `null` jika Firebase tidak diinisialisasi, ini akan ditangani di UI
-// untuk menampilkan pesan konfigurasi.
-export const db = app ? getFirestore(app) : null;
+export const db = getFirestore(app);
