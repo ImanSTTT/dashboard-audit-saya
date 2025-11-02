@@ -9,9 +9,7 @@ import { AddRequestModal } from './components/modals/AddRequestModal';
 import { AddEvidenceModal } from './components/modals/AddEvidenceModal';
 import { AuditProject, AuditRequest, Evidence, RequestStatus } from './types';
 import { db } from './firebase';
-// FIX: The following Firebase v9 modular imports are removed because the project uses an older SDK version.
-// The functions collection, onSnapshot, addDoc, doc, deleteDoc were not found.
-// All Firestore operations will now use the v8 namespaced syntax (e.g., db.collection()).
+import { collection, addDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
 
 type View = 'dashboard' | 'permintaan' | 'bukti';
 
@@ -29,34 +27,48 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Pastikan db tidak null sebelum mencoba membuat koneksi
+    if (!db) {
+        console.error("Firebase is not configured correctly.");
+        setLoading(false);
+        return;
+    }
+
     setLoading(true);
 
-    // FIX: Updated to Firebase v8 syntax for real-time listeners.
-    const unsubProjects = db.collection("projects").onSnapshot((snapshot) => {
-      const projectsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditProject));
-      setProjects(projectsList);
-    }, (error) => {
-      console.error("Error listening to projects collection:", error);
-    });
+    const unsubProjects = onSnapshot(collection(db, 'projects'), 
+      (snapshot) => {
+        const projectsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditProject));
+        setProjects(projectsList);
+      },
+      (error) => {
+        console.error("Error listening to projects collection:", error);
+      }
+    );
 
-    // FIX: Updated to Firebase v8 syntax for real-time listeners.
-    const unsubRequests = db.collection("requests").onSnapshot((snapshot) => {
-      const requestsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditRequest));
-      setRequests(requestsList);
-    }, (error) => {
-      console.error("Error listening to requests collection:", error);
-    });
+    const unsubRequests = onSnapshot(collection(db, 'requests'), 
+      (snapshot) => {
+        const requestsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AuditRequest));
+        setRequests(requestsList);
+      },
+      (error) => {
+        console.error("Error listening to requests collection:", error);
+      }
+    );
 
-    // FIX: Updated to Firebase v8 syntax for real-time listeners.
-    const unsubEvidence = db.collection("evidence").onSnapshot((snapshot) => {
-      const evidenceList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evidence));
-      setEvidence(evidenceList);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error listening to evidence collection:", error);
-      setLoading(false);
-    });
+    const unsubEvidence = onSnapshot(collection(db, 'evidence'), 
+      (snapshot) => {
+        const evidenceList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Evidence));
+        setEvidence(evidenceList);
+        setLoading(false); // Data loaded
+      },
+      (error) => {
+        console.error("Error listening to evidence collection:", error);
+        setLoading(false);
+      }
+    );
 
+    // Cleanup listeners on component unmount
     return () => {
       unsubProjects();
       unsubRequests();
@@ -66,9 +78,9 @@ const App: React.FC = () => {
 
 
   const addProject = async (name: string) => {
+    if (!db) return;
     try {
-      // FIX: Updated to Firebase v8 syntax for adding a document.
-      await db.collection('projects').add({ name });
+      await addDoc(collection(db, 'projects'), { name });
       setAddProjectModalOpen(false);
     } catch (error) {
       console.error("Error adding project: ", error);
@@ -76,13 +88,13 @@ const App: React.FC = () => {
   };
   
   const addRequest = async (requestData: Omit<AuditRequest, 'id' | 'status'>) => {
+     if (!db) return;
      try {
        const newRequestData = {
          ...requestData,
          status: RequestStatus.NotStarted,
        };
-       // FIX: Updated to Firebase v8 syntax for adding a document.
-       await db.collection('requests').add(newRequestData);
+       await addDoc(collection(db, 'requests'), newRequestData);
        setAddRequestModalOpen(false);
      } catch (error) {
        console.error("Error adding request: ", error);
@@ -90,32 +102,45 @@ const App: React.FC = () => {
   };
   
   const addEvidence = async (evidenceData: Omit<Evidence, 'id' | 'fileLink'>) => {
+     if (!db) return;
      try {
        const newEvidenceData = {
          ...evidenceData,
-         fileLink: '#', // Placeholder
+         fileLink: '#', // Placeholder, you might want to integrate with Firebase Storage later
        };
-       // FIX: Updated to Firebase v8 syntax for adding a document.
-       await db.collection('evidence').add(newEvidenceData);
+       await addDoc(collection(db, 'evidence'), newEvidenceData);
        setAddEvidenceModalOpen(false);
      } catch (error) {
        console.error("Error adding evidence: ", error);
      }
   };
+
+  const deleteProject = async (projectId: string) => {
+    if (!db) return;
+    // Note: This only deletes the project doc. Associated requests are not deleted automatically.
+    // For a production app, you might want to handle this with a transaction or cloud function.
+    if (window.confirm('Apakah Anda yakin ingin menghapus proyek ini? Permintaan terkait tidak akan dihapus.')) {
+        try {
+            await deleteDoc(doc(db, 'projects', projectId));
+        } catch (error) {
+            console.error("Error deleting project: ", error);
+        }
+    }
+  };
   
   const deleteRequest = async (requestId: string) => {
+    if (!db) return;
     try {
-      // FIX: Updated to Firebase v8 syntax for deleting a document.
-      await db.collection('requests').doc(requestId).delete();
+      await deleteDoc(doc(db, 'requests', requestId));
     } catch (error) {
       console.error("Error deleting request: ", error);
     }
   };
 
   const deleteEvidence = async (evidenceId: string) => {
+    if (!db) return;
     try {
-      // FIX: Updated to Firebase v8 syntax for deleting a document.
-      await db.collection('evidence').doc(evidenceId).delete();
+      await deleteDoc(doc(db, 'evidence', evidenceId));
     } catch (error)
       {
       console.error("Error deleting evidence: ", error);
@@ -144,6 +169,7 @@ const App: React.FC = () => {
             onAddProject={() => setAddProjectModalOpen(true)}
             onAddRequest={() => setAddRequestModalOpen(true)}
             onDeleteRequest={deleteRequest}
+            onDeleteProject={deleteProject}
         />;
       case 'bukti':
         return <EvidenceBank 
